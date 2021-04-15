@@ -697,7 +697,7 @@ namespace NuGet.SolutionRestoreManager
 
             var continuation = joinableTask
                 .Task
-                .ContinueWith(t => restoreOperation.ContinuationAction(t, JoinableTaskFactory));
+                .ContinueWith(t => restoreOperation.ContinuationAction(t));
 
             return await joinableTask;
         }
@@ -786,7 +786,7 @@ namespace NuGet.SolutionRestoreManager
 
             public System.Runtime.CompilerServices.TaskAwaiter<bool> GetAwaiter() => Task.GetAwaiter();
 
-            public void ContinuationAction(Task<bool> targetTask, JoinableTaskFactory jtf)
+            public void ContinuationAction(Task<bool> targetTask)
             {
                 Assumes.True(targetTask.IsCompleted);
 
