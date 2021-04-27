@@ -170,7 +170,6 @@ namespace NuGet.VisualStudio
         /// </param>
         [SuppressMessage("Usage", "VSTHRD109:Switch instead of assert in async methods", Justification = "https://github.com/NuGet/Home/issues/10933")]
         internal async Task PerformPackageInstallAsync(
-            IVsPackageInstaller packageInstaller,
             EnvDTE.Project project,
             PreinstalledPackageConfiguration configuration,
             bool preferPackageReferenceFormat,
