@@ -18,6 +18,7 @@ steps:
     downloadPath: "$(Build.Repository.LocalPath)/artifacts"
 
 - task: MSBuild@1
+  msbuildVersion: "17.0"
   displayName: "Bootstrap NuGet packages"
   inputs:
     solution: "build\\bootstrap.proj"
@@ -62,6 +63,7 @@ steps:
     arguments: "sources add -Name ApexFeed -Source $(ApexPackageFeedUrl) -UserName $(ApexPackageFeedUsername) -Password $(ApexPackageFeedPassword) -ConfigFile $(System.DefaultWorkingDirectory)\\NuGet.config"
 
 - task: MSBuild@1
+  msbuildVersion: "17.0"
   displayName: "Restore Apex Tests"
   inputs:
     solution: "build\\build.proj"
@@ -70,6 +72,7 @@ steps:
     msbuildArguments: "/t:RestoreApex /p:BuildNumber=$(BuildNumber) /p:MSBuildEnableWorkloadResolver=false"
 
 - task: MSBuild@1
+  msbuildVersion: "17.0"
   displayName: "Run Apex Tests (continue on error)"
   timeoutInMinutes: 120
   continueOnError: "true"
@@ -82,6 +85,7 @@ steps:
   condition: "and(succeeded(), eq(variables['IsOfficialBuild'], 'true'))"
 
 - task: MSBuild@1
+  msbuildVersion: "17.0"
   displayName: "Run Apex Tests (stop on error)"
   timeoutInMinutes: 120
   continueOnError: "false"
