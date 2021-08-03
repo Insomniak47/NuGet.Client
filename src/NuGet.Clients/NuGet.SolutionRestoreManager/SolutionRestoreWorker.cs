@@ -517,6 +517,7 @@ namespace NuGet.SolutionRestoreManager
                                 {
                                     if (isBulkRestoreCoordinationEnabled)
                                     {
+                                        var logger = NuGetFileLogger.DefaultInstance;
                                         var projectReadyCheckMeasurement = Stopwatch.StartNew();
                                         if (bulkRestoreCoordinationCheckStartTime == default)
                                         {
@@ -531,20 +532,31 @@ namespace NuGet.SolutionRestoreManager
                                         for (int i = 0; i < restoreProjectInfoSources.Count && !bulkCheckTimeout; i++)
                                         {
                                             var restoreInfoSource = (IVsProjectRestoreInfoSource)restoreProjectInfoSources[i];
+
                                             if (restoreInfoSource.HasPendingNomination)
                                             {
+                                                logger.Write(restoreInfoSource.Name + $": HasPendingNomination=true");
                                                 allProjectsReady = false;
                                                 TimeSpan timeoutTime = CalculateTimeoutTime(bulkRestoreCoordinationCheckStartTime.Value, DateTime.UtcNow, BulkRestoreCoordinationTimeout);
+
+                                                logger.Write(restoreInfoSource.Name + $": WhenNominated Start");
                                                 var timeoutTask = Task.Delay(timeoutTime, token);
                                                 var whenNominatedTask = restoreInfoSource.WhenNominated(token);
 
                                                 var result = Task.WhenAny(whenNominatedTask, timeoutTask);
+                                                logger.Write(restoreInfoSource.Name + $": WhenNominated End");
+
                                                 if (result == timeoutTask)
                                                 {
                                                     bulkCheckTimeout = true;
                                                 }
                                             }
+                                            else
+                                            {
+                                                logger.Write(restoreInfoSource.Name + $": HasPendingNomination=false");
+                                            }
                                         }
+                                        logger.Write($"Completed check: {projectsReadyCheckCount}");
 
                                         projectReadyCheckMeasurement.Stop();
                                         if (projectReadyTimings == null)
@@ -603,7 +615,7 @@ namespace NuGet.SolutionRestoreManager
                                 }
                             }
                         }
-
+                        
                         token.ThrowIfCancellationRequested();
 
                         // Replaces pending restore operation with a new one.
