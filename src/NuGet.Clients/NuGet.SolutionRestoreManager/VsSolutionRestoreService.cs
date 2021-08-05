@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft;
+using Microsoft.Build.Utilities;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -123,6 +124,8 @@ namespace NuGet.SolutionRestoreManager
         /// <returns>The task that scheduled restore</returns>
         private async Task<bool> NominateProjectAsync(string projectUniqueName, IVsProjectRestoreInfo projectRestoreInfo, IVsProjectRestoreInfo2 projectRestoreInfo2, CancellationToken token)
         {
+            NuGetFileLogger.DefaultInstance.Write(projectUniqueName + ": Nominated");
+
             if (string.IsNullOrEmpty(projectUniqueName))
             {
                 throw new ArgumentException(Resources.Argument_Cannot_Be_Null_Or_Empty, nameof(projectUniqueName));
