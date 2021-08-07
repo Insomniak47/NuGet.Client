@@ -299,28 +299,27 @@ steps:
   condition: " and(succeeded(),eq(variables['BuildRTM'], 'false')) "
 
 - task: NuGetCommand@2
-  displayName: 'OptProfV2:  add the NuGet package source'
+  displayName: 'Add the VSEng package source'
   inputs:
     command: 'custom'
     arguments: 'sources add -Name VS -Source $(VsPackageFeedUrl) -UserName $(VsPackageFeedUsername) -Password $(VsPackageFeedPassword) -ConfigFile $(System.DefaultWorkingDirectory)\NuGet.config'
-  condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'), eq(variables['IsOfficialBuild'], 'true'))"
+  condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'))"
 
 - task: NuGetCommand@2
-  displayName: 'OptProfV2:  install the NuGet package for building .runsettingsproj file'
+  displayName: 'Install the NuGet package for building .runsettingsproj file'
   inputs:
     command: 'custom'
-    arguments: 'install Microsoft.DevDiv.Validation.TestPlatform.Settings.Tasks -Version 1.0.308 -Source $(VsPackageFeedUrl) -ConfigFile $(System.DefaultWorkingDirectory)\NuGet.config -OutputDirectory $(System.DefaultWorkingDirectory)\packages'
-  condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'), eq(variables['IsOfficialBuild'], 'true'))"
+    arguments: 'install Microsoft.DevDiv.Validation.TestPlatform.Settings.Tasks -Version 1.0.655 -Source $(VsPackageFeedUrl) -ConfigFile $(System.DefaultWorkingDirectory)\NuGet.config -OutputDirectory $(System.DefaultWorkingDirectory)\packages'
+  condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'))"
 
 - task: MicroBuildBuildVSBootstrapper@2
-  displayName: 'OptProfV2:  build a Visual Studio bootstrapper'
+  displayName: 'Build a Visual Studio bootstrapper'
   inputs:
     channelName: "$(VsTargetChannel)"
     vsMajorVersion: "$(VsTargetMajorVersion)"
     manifests: '$(Build.Repository.LocalPath)\artifacts\VS15\Microsoft.VisualStudio.NuGet.Core.vsman'
     outputFolder: '$(Build.Repository.LocalPath)\artifacts\VS15'
-  continueOnError: true
-  condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'), eq(variables['IsOfficialBuild'], 'true'))"
+  condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'))"
 
 - task: PublishBuildArtifacts@1
   displayName: 'OptProfV2:  publish BootstrapperInfo.json as a build artifact'
@@ -331,25 +330,35 @@ steps:
   condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'), eq(variables['IsOfficialBuild'], 'true'))"
 
 - task: PowerShell@1
-  displayName: 'OptProfV2:  set the TestDrop environment variable'
+  name: VSTesting
+  displayName: 'Set environment variables for VS testing'
   inputs:
     scriptType: 'inlineScript'
     inlineScript: |
-      [string] $bootstrapperInfoFilePath = "$Env:BUILD_STAGINGDIRECTORY\MicroBuild\Output\BootstrapperInfo.json"
-      $json = Get-Content $bootstrapperInfoFilePath | ConvertFrom-Json
-      [string] $buildDropPath = $json.BuildDrop
-      Write-Host "Build drop:  $buildDropPath"
-      [string] $testDropPath = $buildDropPath.Replace('/Products/', '/Tests/').Substring('https://vsdrop.corp.microsoft.com/file/v1/'.Length)
-      Write-Host "Test drop:  $testDropPath"
-      Write-Host "##vso[task.setvariable variable=TestDrop]$testDropPath"
-  condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'), eq(variables['IsOfficialBuild'], 'true'))"
+      try {
+        $json = Get-Content "${env:Build_StagingDirectory}\MicroBuild\Output\Bootstrapperinfo.json" | ConvertFrom-Json
+
+        [string] $buildDropPath = $json.BuildDrop
+        Write-Host "Build drop:  $buildDropPath"
+        [string] $testDropPath = $buildDropPath.Replace('/Products/', '/Tests/').Substring('https://vsdrop.corp.microsoft.com/file/v1/'.Length)
+        Write-Host "Test drop:  $testDropPath"
+        Write-Host "##vso[task.setvariable variable=TestDrop]$testDropPath"
+
+        $bootstrapperUrl = $json[0].bootstrapperUrl;
+        Write-Host "Bootstrapper URL: $bootstrapperUrl"
+        Write-Host "##vso[task.setvariable variable=bootstrapperUrl;isOutput=true]$bootstrapperUrl"
+      } catch {
+        Write-Host "##vso[task.LogIssue type=error;]$_"
+        exit 1
+      }
+  condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'))"
 
 - task: MSBuild@1
-  displayName: 'OptProfV2:  generate a .runsettings file'
+  displayName: 'Generate .runsettings files'
   inputs:
     solution: 'build\NuGet.OptProfV2.runsettingsproj'
     msbuildArguments: '/p:OutputPath="$(Build.Repository.LocalPath)\artifacts\RunSettings" /p:TestDrop="$(TestDrop)" /p:ProfilingInputsDrop="ProfilingInputs/$(System.TeamProject)/$(Build.Repository.Name)/$(Build.SourceBranchName)/$(Build.BuildId)"'
-  condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'), eq(variables['IsOfficialBuild'], 'true'))"
+  condition: "and(succeeded(), eq(variables['BuildRTM'], 'false'))"
 
 - task: artifactDropTask@0
   displayName: 'OptProfV2:  publish the .runsettings file to artifact services'
